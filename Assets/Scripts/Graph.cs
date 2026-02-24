@@ -141,6 +141,45 @@ public class Graph<T>
         return visited.Count == adjacencyList.Count;
     }
 
+    public bool IsFullyConnectedDFS()
+    {
+        HashSet<T> visited = new HashSet<T>();
+        T startNode = default;
+
+        // Find any valid start node
+        foreach (var node in adjacencyList.Keys)
+        {
+            if (adjacencyList.ContainsKey(node))
+            {
+                startNode = node;
+                break;
+            }
+        }
+
+        if (startNode == null || startNode.Equals(default(T)))
+            return false; // Empty graph or invalid node
+
+        DFSRecursive(startNode, visited);
+
+        return visited.Count == adjacencyList.Count;
+    }
+
+    private void DFSRecursive(T node, HashSet<T> visited)
+    {
+        visited.Add(node);
+
+        foreach (var neighbor in adjacencyList[node])
+        {
+            // Skip if node was removed from the graph
+            if (!adjacencyList.ContainsKey(neighbor)) continue;
+
+            if (!visited.Contains(neighbor))
+            {
+                DFSRecursive(neighbor, visited);
+            }
+        }
+    }
+
     public void BFS(T startNode)
     {
         HashSet<T> visited = new HashSet<T>();
@@ -164,7 +203,7 @@ public class Graph<T>
         }
     }
     // Depth-First Search (DFS)
-    public void DFS(T startNode)
+    public void Dfs(T startNode)
     {
         Stack<T> stack = new Stack<T>();
         HashSet<T> visited = new HashSet<T>();

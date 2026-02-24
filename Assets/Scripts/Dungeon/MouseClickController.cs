@@ -8,6 +8,11 @@ public class MouseClickController : MonoBehaviour
     private float _debugRayDistance;
     
     public UnityEvent<Vector3> OnClick;
+
+    void Start()
+    {
+        OnClick.AddListener(FindFirstObjectByType<PlayerController>().GoToDestination);
+    }
     // Update is called once per frame
     void Update()
     {

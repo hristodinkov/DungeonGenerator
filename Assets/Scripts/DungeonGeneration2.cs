@@ -17,11 +17,13 @@ public class DungeonGenerator2 : MonoBehaviour
     public float secondsForTest = 0;
 
     [Space]
-    public bool noRoomLooping = true;
+    [SerializeField] private bool noRoomLooping = true;
 
-    public bool placeAssetsCubes = false;
+    [SerializeField] private bool placeAssetsCubes = false;
 
-    public bool placeAssetsMarchingSquares = false;
+    [SerializeField] private bool placeAssetsMarchingSquares = false;
+
+    public bool dijkstraPathFind = false;
 
     [Header("Required Assets")]
 
@@ -67,7 +69,7 @@ public class DungeonGenerator2 : MonoBehaviour
     public static DungeonGenerator2 Instance { get; private set; }
 
     /// <summary>
-    /// Initializes the singleton instance of the dungeon generator.
+    /// Starts the singleton instance of the dungeon generator.
     /// </summary>
     private void Awake()
     {
@@ -81,7 +83,7 @@ public class DungeonGenerator2 : MonoBehaviour
     }
 
     /// <summary>
-    /// Starts dungeon generation and applies initial seed logic.
+    /// Starts dungeon generation and applies seed logic.
     /// </summary>
     private void Start()
     {
@@ -146,8 +148,6 @@ public class DungeonGenerator2 : MonoBehaviour
     {
         SIZE = seededRandom.Next(50, 200);
         SIZE = Mathf.Clamp(SIZE, 50, 200);
-        //numberOfRooms = seededRandom.Next(10, 300);
-        //numberOfRooms = Mathf.Clamp(numberOfRooms, 10, 300);
         wMin = seededRandom.Next(5, 30);
         wMin = Mathf.Clamp(wMin, 3, 40);
         hMin = seededRandom.Next(5, 30);
@@ -235,27 +235,27 @@ public class DungeonGenerator2 : MonoBehaviour
     private int CalculateHorizontalSplitPoint(RectInt room)
     {
         int splitPoint = -1;
-        int c = 0;
+        int attempts = 0;
         int minSplit = distanceFromEdgeW;
         int maxSplit = room.height - distanceFromEdgeW;
 
         do
         {
-            c++;
+            attempts++;
             if (minSplit > maxSplit)
             {
                 continue;
             }
             splitPoint = seededRandom.Next(minSplit, maxSplit);
 
-            // Ensure valid split point
+            // Check for valid split point
             if (splitPoint + intersectLength <= room.height - intersectLength &&
                 splitPoint - intersectLength >= intersectLength)
             {
                 break;
             }
         }
-        while (c < 100); // Max 100 attempts
+        while (attempts < 100); 
 
         return splitPoint;
     }
@@ -318,14 +318,14 @@ public class DungeonGenerator2 : MonoBehaviour
     private int CalculateVerticalSplitPoint(RectInt room)
     {
         int splitPoint = -1;
-        int c = 0;
+        int attempts = 0;
 
         int minSplit = distanceFromEdgeH;
         int maxSplit = room.width - distanceFromEdgeH;
 
         do
         {
-            c++;
+            attempts++;
             if (minSplit > maxSplit)
             {
                 continue;
@@ -338,7 +338,7 @@ public class DungeonGenerator2 : MonoBehaviour
                 break;
             }
         }
-        while (c < 100);
+        while (attempts < 100);
 
         return splitPoint;
 
@@ -390,21 +390,33 @@ public class DungeonGenerator2 : MonoBehaviour
         Debug.Log("Dungeon Finished");
         if (placeAssetsCubes)
         {
-            yield return StartCoroutine(SpawnDungeonAssets());
-            BakeNavMesh();
+            yield return StartCoroutine(SpawnDungeonAssets());         
         }
         if (placeAssetsMarchingSquares && !placeAssetsCubes)
         {
             Debug.Log("Generating Tile Map");
             TileMapGenerator.Instance.GenerateTileMap();
             Debug.Log("Placing wall assets");
-            StartCoroutine(TileMapGenerator.Instance.SpawnWalls());
+            yield return StartCoroutine(TileMapGenerator.Instance.SpawnWalls());
             Debug.Log("Floor fill");
             FloorFillSpawner.Instance.FloorFill();
             yield return new WaitUntil(() => FloorFillSpawner.Instance.floorPlaced == true);
+            if (dijkstraPathFind)
+            {
+                Debug.Log(DijkstraPathFinder.Instance.graph.GetNodes().Count+  " nodes");
+                //DijkstraPathFinder.Instance.DeleteWallNodes();
+            }
+        }
+        if (!dijkstraPathFind)
+        {
             BakeNavMesh();
         }
         FixPlayerPosition();
+        if (dijkstraPathFind)
+        {
+            yield return StartCoroutine(DijkstraPathFinder.Instance.ShowGraph());
+        }
+
         Debug.Log("The dungeon is finished for " + Time.time + " second.");
 
         yield break;
@@ -490,11 +502,13 @@ public class DungeonGenerator2 : MonoBehaviour
 
         List<RectInt> orderRooms = rooms.OrderBy(room => room.width * room.height).ToList();
         int numberOfRoomsToDelete = (int)(orderRooms.Count * deletePercent / 100);
+        int counter = 0;
         int removedCount = 0;
         yield return StartCoroutine(GraphCreator(false));
         backUpGraph = originalGraph.Clone();
         foreach (var roomToDelete in orderRooms)
         {
+            counter++;
             if (removedCount >= numberOfRoomsToDelete) break;
             // All doors in tthe room to delete
             List<RectInt> doorInRoom = new List<RectInt>();
@@ -514,13 +528,7 @@ public class DungeonGenerator2 : MonoBehaviour
 
             originalGraph.RemoveNode(roomToDelete);
 
-            foreach (var door in doorInRoom)
-            {
-                if (!doors.Any(d => AlgorithmsUtils.Intersects(d, door)))
-                    originalGraph.RemoveNode(door);
-            }
-
-            if (originalGraph.IsFullyConnected())
+            if (originalGraph.IsFullyConnectedDFS())
             {
                 rooms.Remove(roomToDelete);
                 foreach (var door in doorInRoom)
@@ -535,13 +543,20 @@ public class DungeonGenerator2 : MonoBehaviour
                 {
                     yield return new WaitForSeconds(secondsForTest);
                 }
-                
+
             }
             else
             {
                 originalGraph = backUpGraph.Clone();
             }
+            if (counter > 300)
+            {
+                break;
+            }
         }
+
+
+
         Debug.Log(removedCount + " out of " + numberOfRoomsToDelete + " are deleted");
     }
 

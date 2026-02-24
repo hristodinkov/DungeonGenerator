@@ -24,6 +24,8 @@ public class TileMapGenerator : MonoBehaviour
     
     public int [,] _tileMap;
 
+    [HideInInspector] public List<GameObject> walls = new List<GameObject>();
+
     public static TileMapGenerator Instance { get; private set; }
 
     private void Awake()
@@ -144,7 +146,7 @@ public class TileMapGenerator : MonoBehaviour
 
                 if (prefab == null||value==0) continue;
 
-                Instantiate(prefab, position, prefab.gameObject.transform.localRotation,transform);
+                walls.Add(Instantiate(prefab, position, prefab.gameObject.transform.localRotation,transform));
                 processed++;
                 if (processed >= processedPerFrame&&DungeonGenerator2.Instance.CheckExecutionMode()&&!DungeonGenerator2.Instance.skipThisStep)
                 {

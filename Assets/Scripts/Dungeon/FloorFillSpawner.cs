@@ -56,7 +56,7 @@ public class FloorFillSpawner : MonoBehaviour
         int startC = startRoom.xMin + startRoom.width / 2;
         int startR = startRoom.yMin + startRoom.height / 2;
 
-        yield return StartCoroutine(FloorFillBFS(startR, startC, startRoom));
+        yield return StartCoroutine(FloorFillBFS(startR, startC));
 
         Debug.Log("Floor placed");
         floorPlaced = true;
@@ -64,27 +64,39 @@ public class FloorFillSpawner : MonoBehaviour
     ///<summary>
     ///Spawning the floor using a BFS approach
     ///</summary>
-    private IEnumerator FloorFillBFS(int startR, int startC, RectInt room)
+    private IEnumerator FloorFillBFS(int startR, int startC)
     {
-        Queue<Vector2Int> queue = new Queue<Vector2Int>();
-        queue.Enqueue(new Vector2Int(startC, startR));
-        visited[startR, startC] = true;
-        Instantiate(floor, new Vector3(startC + 0.5f, 0, startR + 0.5f), Quaternion.identity, transform);
+        Queue<Vector3> queue = new Queue<Vector3>();
+        Vector3 startTilePos = new Vector3(startC + 0.5f, 0, startR + 0.5f);
 
-        int processedPerFrame =200; 
+        queue.Enqueue(new Vector3(startC, startR));
+        visited[startR, startC] = true;
+        
+        Instantiate(floor,startTilePos , Quaternion.identity, transform);
+        if (DungeonGenerator2.Instance.dijkstraPathFind)
+        {
+            DijkstraPathFinder.Instance.graph.AddNode(startTilePos);
+        }
+        int processedPerFrame =50; 
         int processed = 0;
 
         while (queue.Count > 0)
         {
-            Vector2Int tile = queue.Dequeue();
-            int r = tile.y;
-            int c = tile.x;
-
-            TrySpawnTile(r + 1, c, queue, room); // Up
-            TrySpawnTile(r - 1, c, queue, room); // Down
-            TrySpawnTile(r, c + 1, queue, room); // Right
-            TrySpawnTile(r, c - 1, queue, room); // Left
-
+            Vector3 tile = queue.Dequeue();
+            int r = Mathf.RoundToInt(tile.z);
+            int c = Mathf.RoundToInt(tile.x);
+            Vector3 tileToLookAround = new Vector3(c+0.5f,0,r+0.5f);
+            TrySpawnTile(r + 1, c, queue,tileToLookAround); // Up
+            TrySpawnTile(r - 1, c, queue,tileToLookAround); // Down
+            TrySpawnTile(r, c + 1, queue,tileToLookAround); // Right
+            TrySpawnTile(r, c - 1, queue, tileToLookAround); // Left
+            if (!IsDoorAdjacent(r,c))
+            {
+                TrySpawnTile(r + 1, c + 1, queue, tileToLookAround);
+                TrySpawnTile(r - 1, c + 1, queue, tileToLookAround);
+                TrySpawnTile(r + 1, c - 1, queue, tileToLookAround);
+                TrySpawnTile(r - 1, c - 1, queue, tileToLookAround);
+            }
             processed++;
             if (processed >= processedPerFrame&& DungeonGenerator2.Instance.CheckExecutionMode()&&!DungeonGenerator2.Instance.skipThisStep)
             {
@@ -95,18 +107,58 @@ public class FloorFillSpawner : MonoBehaviour
             }
         }
     }
+
     ///<summary>
     ///Spawning of the tiles
     ///</summary>
-    private void TrySpawnTile(int r, int c, Queue<Vector2Int> queue, RectInt room)
+    private void TrySpawnTile(int r, int c, Queue<Vector3> queue,Vector3 tileBFS)
     {
         if (r < 0 || r >= rows || c < 0 || c >= cols) return;
-        if (tileMap[r, c] != 0 || visited[r, c]) return;
-
+        Vector3 tilePos = new Vector3(c + 0.5f, 0, r + 0.5f);
+        if (tileMap[r, c] != 0 || visited[r, c])
+        {
+            if (DungeonGenerator2.Instance.dijkstraPathFind)
+            {
+                DijkstraPathFinder.Instance.graph.AddEdge(tileBFS, tilePos);
+            }
+            
+            return;
+        }
         visited[r, c] = true;
-        Instantiate(floor, new Vector3(c + 0.5f, 0, r + 0.5f), Quaternion.identity, transform);
-        queue.Enqueue(new Vector2Int(c, r));
+
+        Instantiate(floor, tilePos, Quaternion.identity, transform);
+        queue.Enqueue(new Vector3(c, 0, r));
+
+        if (DungeonGenerator2.Instance.dijkstraPathFind && (r >= 2 && r < rows - 2 && c >= 2 && c < cols - 2))
+        {
+            DijkstraPathFinder.Instance.graph.AddNode(tilePos);
+
+            DijkstraPathFinder.Instance.graph.AddEdge(tileBFS, tilePos);
+        }
+
     }
+
+    private bool IsDoorAdjacent(int r, int c)
+    {
+        foreach (var door in doors)
+        {
+            for (int y = door.yMin; y < door.yMax; y++)
+            {
+                for (int x = door.xMin; x < door.xMax; x++)
+                {
+                    if (Mathf.Abs(r - y) <= 2 && Mathf.Abs(c - x) <= 2)
+                    {
+                        return true; 
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    
+   
+
 
     void InitVisited()
     {
