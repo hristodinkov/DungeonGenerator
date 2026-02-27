@@ -1,7 +1,6 @@
 # Dungeon Generator in Unity 
 
-A fully procedural dungeon generator built in Unity.
-It uses Binary Space Partitioning (BSP), room graph‑based connectivity, tilemap generation, wall and floor spawning, and optional Dijkstra pathfinding.
+The project is a fully procedural dungeon generator built in Unity, capable of creating unique dungeon layouts every time the scene runs. It uses ***Binary Space Partitioning*** to split space into rooms, builds a connectivity ***graph*** to ensure all areas are reachable, and removes loops or unnecessary rooms to keep the layout clean. After the logical structure is complete, the system generates walls using ***marching squares*** and fills the walkable areas with a ***BFS floor‑filling algorithm***. The result is a fully navigable dungeon where the player can move using either Unity's NavMesh or a ***custom Dijkstra pathfinding system***.
 
 ## Preview
 <img src="Pictures/dungeon.gif" width="600" height="600">
