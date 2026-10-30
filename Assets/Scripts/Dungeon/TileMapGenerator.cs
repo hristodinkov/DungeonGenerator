@@ -15,7 +15,7 @@ public class TileMapGenerator : MonoBehaviour
     [SerializeField]
     private UnityEvent onGenerateTileMap;
 
-    private DungeonGenerator2 dungeonGenerator;
+    private DungeonGenerator dungeonGenerator;
 
     [SerializeField]
     List<WallScriptableObject> prefabs = new List<WallScriptableObject>();
@@ -42,7 +42,7 @@ public class TileMapGenerator : MonoBehaviour
 
     private void Start()
     {
-        dungeonGenerator = GetComponent<DungeonGenerator2>();
+        dungeonGenerator = GetComponent<DungeonGenerator>();
 
         foreach (var prefab in prefabs)
         {
@@ -148,7 +148,7 @@ public class TileMapGenerator : MonoBehaviour
 
                 walls.Add(Instantiate(prefab, position, prefab.gameObject.transform.localRotation,transform));
                 processed++;
-                if (processed >= processedPerFrame&&DungeonGenerator2.Instance.CheckExecutionMode()&&!DungeonGenerator2.Instance.skipThisStep)
+                if (processed >= processedPerFrame&&DungeonGenerator.Instance.CheckExecutionMode()&&!DungeonGenerator.Instance.skipThisStep)
                 {
                     processed = 0;
                     yield return null;

@@ -49,7 +49,7 @@ public class DijkstraPathFinder : MonoBehaviour
 
 
         HashSet<Vector3Int> doorPositions = new HashSet<Vector3Int>();
-        foreach (var door in DungeonGenerator2.Instance.GetDoors())
+        foreach (var door in DungeonGenerator.Instance.GetDoors())
         {
             for (int x = door.x; x < door.x + door.width; x++)
             {

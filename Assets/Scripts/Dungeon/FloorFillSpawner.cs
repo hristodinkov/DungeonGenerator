@@ -1,10 +1,7 @@
 using NaughtyAttributes;
-using NUnit.Framework;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
-using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
-using static UnityEngine.Rendering.DebugUI.Table;
 
 [DefaultExecutionOrder(2)]
 public class FloorFillSpawner : MonoBehaviour
@@ -15,7 +12,6 @@ public class FloorFillSpawner : MonoBehaviour
     private int rows;
     private int cols;
     public bool[,] visited;
-    public GameObject objectToDisappear;
     public GameObject floor;
     public bool floorPlaced = false;
 
@@ -36,9 +32,9 @@ public class FloorFillSpawner : MonoBehaviour
     [Button]
     public void FloorFill()
     {
-        rooms = DungeonGenerator2.Instance.GetRooms();
+        rooms = DungeonGenerator.Instance.GetRooms();
         tileMap = TileMapGenerator.Instance.GetTileMap();
-        doors = DungeonGenerator2.Instance.GetDoors();
+        doors = DungeonGenerator.Instance.GetDoors();
         InitVisited();
         StartCoroutine(StartFlooring());
         
@@ -48,7 +44,7 @@ public class FloorFillSpawner : MonoBehaviour
     ///</summary>
     private IEnumerator StartFlooring()
     {
-        Graph<RectInt> graph = DungeonGenerator2.Instance.originalGraph.Clone();
+        Graph<RectInt> graph = DungeonGenerator.Instance.originalGraph.Clone();
 
         List<RectInt> rectInts = graph.GetNodes();
         RectInt startRoom = rectInts[0];
@@ -73,7 +69,7 @@ public class FloorFillSpawner : MonoBehaviour
         visited[startR, startC] = true;
         
         Instantiate(floor,startTilePos , Quaternion.identity, transform);
-        if (DungeonGenerator2.Instance.dijkstraPathFind)
+        if (DungeonGenerator.Instance.dijkstraPathFind)
         {
             DijkstraPathFinder.Instance.graph.AddNode(startTilePos);
         }
@@ -98,12 +94,12 @@ public class FloorFillSpawner : MonoBehaviour
                 TrySpawnTile(r - 1, c - 1, queue, tileToLookAround);
             }
             processed++;
-            if (processed >= processedPerFrame&& DungeonGenerator2.Instance.CheckExecutionMode()&&!DungeonGenerator2.Instance.skipThisStep)
+            if (processed >= processedPerFrame&& DungeonGenerator.Instance.CheckExecutionMode()&&!DungeonGenerator.Instance.skipThisStep)
             {
                 processed = 0; // this is equal to yield return
                 yield return null;
                 
-                 //it is like saying to unity after 4*processedPerFrame tiles to take a break to avoid stack overflow
+                 //it is like saying to unity after 4*processedPerFrame tiles to take a break to spread the work accross multiple frames
             }
         }
     }
@@ -117,7 +113,7 @@ public class FloorFillSpawner : MonoBehaviour
         Vector3 tilePos = new Vector3(c + 0.5f, 0, r + 0.5f);
         if (tileMap[r, c] != 0 || visited[r, c])
         {
-            if (DungeonGenerator2.Instance.dijkstraPathFind)
+            if (DungeonGenerator.Instance.dijkstraPathFind)
             {
                 DijkstraPathFinder.Instance.graph.AddEdge(tileBFS, tilePos);
             }
@@ -129,7 +125,7 @@ public class FloorFillSpawner : MonoBehaviour
         Instantiate(floor, tilePos, Quaternion.identity, transform);
         queue.Enqueue(new Vector3(c, 0, r));
 
-        if (DungeonGenerator2.Instance.dijkstraPathFind && (r >= 2 && r < rows - 2 && c >= 2 && c < cols - 2))
+        if (DungeonGenerator.Instance.dijkstraPathFind && (r >= 2 && r < rows - 2 && c >= 2 && c < cols - 2))
         {
             DijkstraPathFinder.Instance.graph.AddNode(tilePos);
 

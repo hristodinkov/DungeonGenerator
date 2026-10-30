@@ -24,7 +24,7 @@ public class PlayerController : MonoBehaviour
 
     public void GoToDestination(Vector3 destination)
     {
-        if (!DungeonGenerator2.Instance.dijkstraPathFind)
+        if (!DungeonGenerator.Instance.dijkstraPathFind)
         {
             navMeshAgent.SetDestination(destination);
         }
